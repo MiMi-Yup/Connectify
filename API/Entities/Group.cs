@@ -1,9 +1,11 @@
-﻿using System.ComponentModel;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace API.Entities
 {
+    [Index(nameof(IsDeleted))]
     public class Group
     {
         [Key]
@@ -13,6 +15,9 @@ namespace API.Entities
         [Required]
         [StringLength(50)]
         public string Name { get; set; } = default!;
+
+        [Required]
+        public AppUser Administrator { get; set; } = default!;
 
         public virtual ICollection<Message> Messages { get; set; } = new List<Message>();
 

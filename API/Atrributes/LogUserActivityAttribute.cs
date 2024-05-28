@@ -16,7 +16,7 @@ namespace API.Atrributes
             var userId = resultContext.HttpContext.User.GetUserId();
             var uow = resultContext.HttpContext.RequestServices.GetService<IUnitOfWork>();
             //GetService: Microsoft.Extensions.DependencyInjection
-            var user = await uow.User.GetByID(userId, true);
+            var user = await uow.Users.GetByID(userId);
             user.LastActive = DateTime.Now;
             await uow.SaveAsync();//add this: services.AddScoped<LogUserActivity>(); [ServiceFilter(typeof(LogUserActivity))] dat truoc controller base
         }

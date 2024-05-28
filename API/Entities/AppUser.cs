@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 
 namespace API.Entities
 {
+    [Index(nameof(IsDeleted))]
     public class AppUser : IdentityUser<Guid>
     {
         public DateTime LastActive { get; set; } = DateTime.Now;

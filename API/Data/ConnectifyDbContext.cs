@@ -2,7 +2,6 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
-using System.Reflection.Emit;
 
 namespace API.Data
 {
@@ -45,6 +44,12 @@ namespace API.Data
                 .HasOne(c => c.ParticipantB)
                 .WithMany(u => u.ContactsAsParticipantB)
                 .HasForeignKey(c => c.ParticipantBId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            builder.Entity<GroupMember>()
+                .HasOne(c => c.Group)
+                .WithMany(u => u.Members)
+                .HasForeignKey(c => c.GroupId)
                 .OnDelete(DeleteBehavior.Restrict);
         }
     }

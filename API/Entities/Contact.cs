@@ -1,9 +1,11 @@
-﻿using System.ComponentModel;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace API.Entities
 {
+    [Index(nameof(IsDeleted))]
     public class Contact
     {
         [Key]
@@ -26,6 +28,9 @@ namespace API.Entities
 
         [Required]
         public DateTime CreatedDate { get; set; }
+
+        [Required]
+        public DateTime UpdatedDate { get; set; }
 
         [Required]
         [DefaultValue(false)]

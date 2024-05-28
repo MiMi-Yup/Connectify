@@ -1,5 +1,7 @@
-﻿using API.Core.Contracts;
+﻿using API.Atrributes;
+using API.Core.Contracts;
 using API.DTOs.Requests.User;
+using API.DTOs.Responses;
 using API.DTOs.Responses.User;
 using API.Entities;
 using API.Extensions;
@@ -16,6 +18,7 @@ namespace API.Controllers.v1
     [ApiController]
     [Route("/api/v{version:apiVersion}/[controller]")]
     [ApiVersion("1.0")]
+    [ServiceFilter(typeof(LogUserActivityAttribute))]
     public class UsersController : ControllerBase
     {
         private readonly ILogger _logger;
@@ -42,11 +45,12 @@ namespace API.Controllers.v1
 
         [Route("[action]")]
         [HttpPost]
+        [ProducesResponseType<APIRes<User_RegisterRes>>(200)]
         public async Task<IActionResult> Register(User_RegisterReq obj)
         {
             var user = _mapper.Map<AppUser>(obj);
 
-            var foundUser = await _unitOfWork.User.Find(item => (item.PhoneNumber == user.PhoneNumber || item.UserName == user.UserName)
+            var foundUser = await _unitOfWork.Users.Find(item => (item.PhoneNumber == user.PhoneNumber || item.UserName == user.UserName)
                 && item.IsDeleted == false
                 && item.Locked == false, trackChanges: false).FirstOrDefaultAsync();
             if (foundUser != null)
@@ -65,19 +69,23 @@ namespace API.Controllers.v1
 
             var userDto = _mapper.Map<UserDto>(user);
 
-            return Ok(new
+            return Ok(new APIRes<User_RegisterRes>
             {
-                User = userDto,
-                AccessToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromMinutes(10), "access_token"),
-                RefreshToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromHours(2), "refresh_token")
+                Data = new User_RegisterRes
+                {
+                    User = userDto,
+                    AccessToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromMinutes(10), "access_token"),
+                    RefreshToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromHours(2), "refresh_token")
+                }
             });
         }
 
         [Route("[action]")]
         [HttpPost]
+        [ProducesResponseType<APIRes<User_LoginRes>>(200)]
         public async Task<IActionResult> Login(User_LoginReq obj)
         {
-            var user = await _unitOfWork.User.Find(item => item.PhoneNumber == obj.PhoneNumber && item.IsDeleted == false && item.Locked == false).FirstOrDefaultAsync();
+            var user = await _unitOfWork.Users.Find(item => item.PhoneNumber == obj.PhoneNumber && item.IsDeleted == false && item.Locked == false).FirstOrDefaultAsync();
             if (user == null)
                 return NotFound($"Phone {obj.PhoneNumber} doesn't exists");
 
@@ -87,17 +95,21 @@ namespace API.Controllers.v1
 
             var userDto = _mapper.Map<UserDto>(user);
 
-            return Ok(new
+            return Ok(new APIRes<User_LoginRes>
             {
-                User = userDto,
-                AccessToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromMinutes(10), "access_token"),
-                RefreshToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromHours(2), "refresh_token")
+                Data = new User_LoginRes
+                {
+                    User = userDto,
+                    AccessToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromMinutes(10), "access_token"),
+                    RefreshToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromHours(2), "refresh_token")
+                }
             });
         }
 
         [Route("[action]")]
         [HttpPost]
         [Authorize]
+        [ProducesResponseType<APIRes<User_RenewTokenRes>>(200)]
         public async Task<IActionResult> RenewToken()
         {
             if (!User.IsRefreshToken())
@@ -105,7 +117,7 @@ namespace API.Controllers.v1
 
             var userId = User.GetUserId();
 
-            var user = await _unitOfWork.User.Find(item => item.Id == userId && item.IsDeleted == false && item.Locked == false, trackChanges: false).FirstOrDefaultAsync();
+            var user = await _unitOfWork.Users.Find(item => item.Id == userId && item.IsDeleted == false && item.Locked == false, trackChanges: false).FirstOrDefaultAsync();
             if (user == null)
                 return BadRequest("User invalid");
 
@@ -116,10 +128,13 @@ namespace API.Controllers.v1
                 {
                     var renew = _tokenService.RenewRefreshToken(accessToken, TimeSpan.FromMinutes(30));
                     if (renew)
-                        return Ok(new
+                        return Ok(new APIRes<User_RenewTokenRes>
                         {
-                            AccessToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromMinutes(10), "access_token"),
-                            RefreshToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromHours(2), "refresh_token")
+                            Data = new User_RenewTokenRes
+                            {
+                                AccessToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromMinutes(10), "access_token"),
+                                RefreshToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromHours(2), "refresh_token")
+                            }
                         });
                 }
             }
@@ -129,9 +144,12 @@ namespace API.Controllers.v1
                 return BadRequest(ex.Message);
             }
 
-            return Ok(new
+            return Ok(new APIRes<User_RenewTokenRes>
             {
-                AccessToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromMinutes(10), "access_token")
+                Data = new User_RenewTokenRes
+                {
+                    AccessToken = await _tokenService.CreateTokenAsync(user, TimeSpan.FromMinutes(10), "access_token")
+                }
             });
         }
 
@@ -142,7 +160,7 @@ namespace API.Controllers.v1
         {
             var userId = User.GetUserId();
 
-            var user = await _unitOfWork.User.Find(item => item.Id == userId && item.IsDeleted == false && item.Locked == false)
+            var user = await _unitOfWork.Users.Find(item => item.Id == userId && item.IsDeleted == false && item.Locked == false)
                 .Include(item => item.ContactsAsParticipantA)
                 .Include(item => item.ContactsAsParticipantB)
                 .Include(item => item.GroupMembers)
@@ -180,7 +198,7 @@ namespace API.Controllers.v1
         {
             var userId = User.GetUserId();
 
-            var user = await _unitOfWork.User.Find(item => item.Id == userId && item.IsDeleted == false && item.Locked == false, trackChanges: false)
+            var user = await _unitOfWork.Users.Find(item => item.Id == userId && item.IsDeleted == false && item.Locked == false, trackChanges: false)
                 .FirstOrDefaultAsync();
             if (user == null)
                 return BadRequest("User invalid");

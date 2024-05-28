@@ -2,7 +2,7 @@
 
 namespace API.DTOs.Responses
 {
-    public class APIReponse<T>
+    public class APIRes<T>
     {
         public T? Data { get; set; }
         public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;

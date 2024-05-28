@@ -1,8 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace API.Entities
 {
+    [Index(nameof(IsDeleted))]
     public class Message
     {
         [Key]
@@ -22,5 +25,13 @@ namespace API.Entities
 
         [Required]
         public DateTime Timestamp { get; set; }
+
+        [Required]
+        [DefaultValue(false)]
+        public bool IsRead { get; set; }
+
+        [Required]
+        [DefaultValue(false)]
+        public bool IsDeleted { get; set; }
     }
 }
