@@ -12,6 +12,7 @@ using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Collections.Immutable;
 
 namespace API.Controllers.v1
 {
@@ -61,7 +62,7 @@ namespace API.Controllers.v1
                 {
                     Id = group.Id,
                     Name = group.Name,
-                    Members = group.Members.Select(item => _mapper.Map<UserDto>(item)).ToList()
+                    Members = group.Members.Select(_mapper.Map<UserDto>).ToList()
                 }
             });
         }
@@ -89,12 +90,27 @@ namespace API.Controllers.v1
             var members = await _unitOfWork.Users.Find(item => obj.UserIds.Contains(item.Id)
                 && item.IsDeleted == false
                 && item.Locked == false)
+                .Include(item => item.ContactsAsParticipantA)
+                .Include(item => item.ContactsAsParticipantB)
                 .ToListAsync();
             if (members.Count != obj.UserIds.Count)
                 return BadRequest(new APIRes<object>
                 {
                     StatusCode = System.Net.HttpStatusCode.NotFound,
                     ErrorMessage = "Some users not found"
+                });
+
+            var contactCount = await _unitOfWork.Contacts.Find(c => c.IsDeleted == false
+                && ((c.ParticipantAId == userId && members.Contains(c.ParticipantB))
+                || (members.Contains(c.ParticipantA) && c.ParticipantBId == userId)), trackChanges: false)
+                .Include(item => item.ParticipantA)
+                .Include(item => item.ParticipantB)
+                .CountAsync();
+            if (contactCount != obj.UserIds.Count)
+                return BadRequest(new APIRes<object>
+                {
+                    StatusCode = System.Net.HttpStatusCode.BadRequest,
+                    ErrorMessage = "Add contacts before adding them to the group"
                 });
 
             var group = new Group
@@ -117,6 +133,126 @@ namespace API.Controllers.v1
             {
                 Data = group.Id
             });
+        }
+
+        [Route("{groupId}")]
+        [HttpPut]
+        public async Task<IActionResult> Update(Guid groupId, Group_UpdateReq obj)
+        {
+            var userId = User.GetUserId();
+            var group = await _unitOfWork.Groups.Find(item => item.IsDeleted == false 
+                && item.Administrator.Id == userId 
+                && item.Administrator.IsDeleted == false 
+                && item.Administrator.Locked == false)
+                .Include(item => item.Administrator)
+                .FirstOrDefaultAsync();
+            if (group == null) 
+                return NotFound();
+
+            group.Name = obj.Name;
+
+            await _unitOfWork.SaveAsync();
+
+            return Ok();
+        }
+
+        [Route("[action]")]
+        [HttpPut]
+        public async Task<IActionResult> AddMembers(Group_AddMembersReq obj)
+        {
+            var userId = User.GetUserId();
+
+            var group = await _unitOfWork.Groups.GetByID(obj.GroupId);
+            var members = await _unitOfWork.Users.Find(item => item.IsDeleted == false && item.Locked == false && obj.UserIds.Contains(item.Id)).ToListAsync();
+            if (members.Count != obj.UserIds.Count)
+                return BadRequest(new APIRes<object>
+                {
+                    StatusCode = System.Net.HttpStatusCode.NotFound,
+                    ErrorMessage = "Some users not found"
+                });
+
+            var contactCount = await _unitOfWork.Contacts.Find(c => c.IsDeleted == false
+                && ((c.ParticipantAId == userId && members.Contains(c.ParticipantB))
+                || (members.Contains(c.ParticipantA) && c.ParticipantBId == userId)), trackChanges: false)
+                .Include(item => item.ParticipantA)
+                .Include(item => item.ParticipantB)
+                .CountAsync();
+            if (contactCount != obj.UserIds.Count)
+                return BadRequest(new APIRes<object>
+                {
+                    StatusCode = System.Net.HttpStatusCode.BadRequest,
+                    ErrorMessage = "Add contacts before adding them to the group"
+                });
+
+            foreach (var user in members)
+            {
+                await _unitOfWork.GroupMembers.Insert(new GroupMember
+                {
+                    GroupId = obj.GroupId,
+                    User = user,
+                    CreatedDate = DateTime.Now,
+                    UpdatedDate = DateTime.Now
+                });
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            return Ok();
+        }
+
+        [Route("[action]/{groupId}")]
+        [HttpPut]
+        public async Task<IActionResult> Leave(Guid groupId)
+        {
+            var userId = User.GetUserId();
+
+            var groupMember = await _unitOfWork.GroupMembers.Find(item => item.IsDeleted == false
+                && item.Group.Id == groupId
+                && item.User.Id == userId
+                && item.User.IsDeleted == false
+                && item.User.Locked == false)
+                .Include(item => item.Group)
+                .Include(item => item.User)
+                .FirstOrDefaultAsync();
+            if (groupMember == null)
+                return NotFound();
+
+            groupMember.IsDeleted = false;
+            groupMember.UpdatedDate = DateTime.Now;
+
+            await _unitOfWork.SaveAsync();
+
+            return Ok();
+        }
+
+        [Route("[action]")]
+        [HttpPut]
+        public async Task<IActionResult> RemoveMembers(Group_RemoveMembersReq obj)
+        {
+            var userId = User.GetUserId();
+
+            var group = await _unitOfWork.Groups.Find(item => item.IsDeleted == false
+                && item.Administrator.Id == userId
+                && item.Administrator.IsDeleted == false
+                && item.Administrator.Locked == false)
+                .Include(item => item.Administrator)
+                .FirstOrDefaultAsync();
+            if (group == null)
+                return NotFound();
+
+            var members = await _unitOfWork.GroupMembers.Find(item => item.GroupId == obj.GroupId 
+                && obj.UserIds.Contains(item.User.Id))
+                .Include(item => item.User)
+                .ToListAsync();
+            foreach (var member in members)
+            {
+                member.IsDeleted = true;
+                member.UpdatedDate = DateTime.Now;
+            }
+
+            await _unitOfWork.SaveAsync();
+
+            return Ok();
         }
 
         [Route("{groupId}")]
@@ -148,6 +284,7 @@ namespace API.Controllers.v1
             foreach (var item in group.Members)
             {
                 item.IsDeleted = true;
+                item.UpdatedDate = DateTime.Now;
             }
 
             await _unitOfWork.SaveAsync();

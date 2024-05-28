@@ -1,9 +1,13 @@
 ﻿using API.Atrributes;
 using API.Core.Contracts;
+using API.DTOs.Requests;
+using API.DTOs.Responses;
+using API.DTOs.Responses.Message;
 using Asp.Versioning;
 using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace API.Controllers.v1
 {
@@ -30,37 +34,58 @@ namespace API.Controllers.v1
             _tokenService = tokenService;
         }
 
-        [HttpGet("{groupId}")]
-        public async Task<IActionResult> ReadById(Guid groupId)
-        {
-            return Ok();
-        }
-
+        [Route("[action]")]
         [HttpPost]
-        public async Task<IActionResult> NewGroup()
+        [ProducesResponseType<APIPagingRes<MessageDto>>(200)]
+        public async Task<IActionResult> Contact(APIPagingReq<Guid> obj)
         {
-            return Ok();
-        }
+            var query = _unitOfWork.Messages.Find(item => item.IsDeleted == false
+                && item.Contact != null
+                && item.Contact.Id == obj.Data)
+                .Include(item => item.Contact)
+                .Include(item => item.Sender)
+                .Include(item => item.Attachment);
 
-        [Route("{groupId}")]
-        [HttpDelete]
-        public async Task<IActionResult> RemoveGroup(Guid groupId)
-        {
-            return Ok();
-        }
+            var totalCount = await query.CountAsync();
+            var messages = await query.OrderByDescending(item => item.Timestamp)
+                .Skip(obj.PageIndex * obj.PageSize)
+                .Take(obj.PageSize)
+                .ToListAsync();
 
-        [Route("{groupId}")]
-        [HttpPut]
-        public async Task<IActionResult> LeaveGroup(Guid groupId)
-        {
-            return Ok();
+            return Ok(new APIPagingRes<MessageDto>
+            {
+                Data = messages.Select(_mapper.Map<MessageDto>).ToList(),
+                TotalCount = totalCount,
+                PageIndex = obj.PageIndex,
+                PageSize = obj.PageSize
+            });
         }
 
         [Route("[action]")]
         [HttpPost]
-        public async Task<IActionResult> Search()
+        [ProducesResponseType<APIPagingRes<MessageDto>>(200)]
+        public async Task<IActionResult> Group(APIPagingReq<Guid> obj)
         {
-            return Ok();
+            var query = _unitOfWork.Messages.Find(item => item.IsDeleted == false
+                && item.Group != null
+                && item.Group.Id == obj.Data)
+                .Include(item => item.Group)
+                .Include(item => item.Sender)
+                .Include(item => item.Attachment);
+
+            var totalCount = await query.CountAsync();
+            var messages = await query.OrderByDescending(item => item.Timestamp)
+                .Skip(obj.PageIndex * obj.PageSize)
+                .Take(obj.PageSize)
+                .ToListAsync();
+
+            return Ok(new APIPagingRes<MessageDto>
+            {
+                Data = messages.Select(_mapper.Map<MessageDto>).ToList(),
+                TotalCount = totalCount,
+                PageIndex = obj.PageIndex,
+                PageSize = obj.PageSize
+            });
         }
     }
 }

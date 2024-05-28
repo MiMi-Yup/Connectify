@@ -11,6 +11,8 @@ namespace API.Core.Implements
         public IGenericRepository<AppUser> Users { get; private set; }
         public IGenericRepository<Contact> Contacts { get; private set; }
         public IGenericRepository<Group> Groups { get; private set; }
+        public IGenericRepository<GroupMember> GroupMembers { get; private set; }
+        public IGenericRepository<Message> Messages { get; private set; }
 
         public UnitOfWork(ConnectifyDbContext context)
         {
@@ -19,6 +21,8 @@ namespace API.Core.Implements
             Users = new GenericRepository<AppUser>(_context);
             Contacts = new GenericRepository<Contact>(_context);
             Groups = new GenericRepository<Group>(_context);
+            GroupMembers = new GenericRepository<GroupMember>(_context);
+            Messages = new GenericRepository<Message>(_context);
         }
 
         public void Dispose()

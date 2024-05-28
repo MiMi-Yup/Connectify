@@ -7,6 +7,8 @@ namespace API.Core.Contracts
         IGenericRepository<AppUser> Users { get; }
         IGenericRepository<Contact> Contacts { get; }
         IGenericRepository<Group> Groups { get; }
+        IGenericRepository<GroupMember> GroupMembers { get; }
+        IGenericRepository<Message> Messages { get; }
 
         Task SaveAsync();
         bool HasChanges();
