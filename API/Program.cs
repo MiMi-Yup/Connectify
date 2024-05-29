@@ -1,7 +1,7 @@
-
 using API.Data;
 using API.Entities;
 using API.Extensions;
+using API.SignalR;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using static API.Extensions.ServiceExtensions;
@@ -23,12 +23,13 @@ namespace API
             builder.Services.AddSwaggerGen();
             builder.Services.ConfigureOptions<ConfigureSwaggerOptions>();
 
-            builder.Services.ConfigCORS(builder.Configuration);
-            builder.Services.ConfigDatabase(builder.Configuration);
+            builder.Services.ConfigureCORS(builder.Configuration);
+            builder.Services.ConfigureDatabase(builder.Configuration);
             builder.Services.ConfigureAPIVersioning(builder.Configuration);
-            builder.Services.ConfigRegister();
+            builder.Services.ConfigureRegister();
             builder.Services.AddIdentityServices(builder.Configuration);
             builder.Services.AddSignalR();
+            builder.Services.ConfigureSignalR();
 
             var app = builder.Build();
 
@@ -62,6 +63,10 @@ namespace API
             app.UseAuthorization();
 
             app.MapControllers();
+
+            app.MapHub<MeetingHub>($"hubs/{nameof(MeetingHub).ToLower()}");
+            app.MapHub<MeetingHub>($"hubs/{nameof(ChatHub).ToLower()}");
+            app.MapHub<MeetingHub>($"hubs/{nameof(PresenceHub).ToLower()}");
 
             app.Run();
         }

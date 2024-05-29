@@ -13,6 +13,8 @@ namespace API.Core.Implements
         public IGenericRepository<Group> Groups { get; private set; }
         public IGenericRepository<GroupMember> GroupMembers { get; private set; }
         public IGenericRepository<Message> Messages { get; private set; }
+        public IGenericRepository<Connection> Connections { get; private set; }
+        public IGenericRepository<Meeting> Meetings { get; private set; }
 
         public UnitOfWork(ConnectifyDbContext context)
         {
@@ -23,6 +25,8 @@ namespace API.Core.Implements
             Groups = new GenericRepository<Group>(_context);
             GroupMembers = new GenericRepository<GroupMember>(_context);
             Messages = new GenericRepository<Message>(_context);
+            Connections = new GenericRepository<Connection>(_context);
+            Meetings = new GenericRepository<Meeting>(_context);
         }
 
         public void Dispose()

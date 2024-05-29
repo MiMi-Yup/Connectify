@@ -12,7 +12,6 @@ using AutoMapper;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Collections.Immutable;
 
 namespace API.Controllers.v1
 {
@@ -140,13 +139,13 @@ namespace API.Controllers.v1
         public async Task<IActionResult> Update(Guid groupId, Group_UpdateReq obj)
         {
             var userId = User.GetUserId();
-            var group = await _unitOfWork.Groups.Find(item => item.IsDeleted == false 
-                && item.Administrator.Id == userId 
-                && item.Administrator.IsDeleted == false 
+            var group = await _unitOfWork.Groups.Find(item => item.IsDeleted == false
+                && item.Administrator.Id == userId
+                && item.Administrator.IsDeleted == false
                 && item.Administrator.Locked == false)
                 .Include(item => item.Administrator)
                 .FirstOrDefaultAsync();
-            if (group == null) 
+            if (group == null)
                 return NotFound();
 
             group.Name = obj.Name;
@@ -156,13 +155,13 @@ namespace API.Controllers.v1
             return Ok();
         }
 
-        [Route("[action]")]
+        [Route("[action]/{groupId}")]
         [HttpPut]
-        public async Task<IActionResult> AddMembers(Group_AddMembersReq obj)
+        public async Task<IActionResult> AddMembers(Guid groupId, Group_AddMembersReq obj)
         {
             var userId = User.GetUserId();
 
-            var group = await _unitOfWork.Groups.GetByID(obj.GroupId);
+            var group = await _unitOfWork.Groups.GetByID(groupId);
             var members = await _unitOfWork.Users.Find(item => item.IsDeleted == false && item.Locked == false && obj.UserIds.Contains(item.Id)).ToListAsync();
             if (members.Count != obj.UserIds.Count)
                 return BadRequest(new APIRes<object>
@@ -188,7 +187,7 @@ namespace API.Controllers.v1
             {
                 await _unitOfWork.GroupMembers.Insert(new GroupMember
                 {
-                    GroupId = obj.GroupId,
+                    GroupId = groupId,
                     User = user,
                     CreatedDate = DateTime.Now,
                     UpdatedDate = DateTime.Now
@@ -225,9 +224,9 @@ namespace API.Controllers.v1
             return Ok();
         }
 
-        [Route("[action]")]
+        [Route("[action]/{groupId}")]
         [HttpPut]
-        public async Task<IActionResult> RemoveMembers(Group_RemoveMembersReq obj)
+        public async Task<IActionResult> RemoveMembers(Guid groupId, Group_RemoveMembersReq obj)
         {
             var userId = User.GetUserId();
 
@@ -240,7 +239,7 @@ namespace API.Controllers.v1
             if (group == null)
                 return NotFound();
 
-            var members = await _unitOfWork.GroupMembers.Find(item => item.GroupId == obj.GroupId 
+            var members = await _unitOfWork.GroupMembers.Find(item => item.GroupId == groupId
                 && obj.UserIds.Contains(item.User.Id))
                 .Include(item => item.User)
                 .ToListAsync();

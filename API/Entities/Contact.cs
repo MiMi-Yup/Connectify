@@ -36,6 +36,6 @@ namespace API.Entities
         [DefaultValue(false)]
         public bool IsDeleted { get; set; } = false;
 
-        public Connection? Connection { get; set; }
+        public virtual ICollection<Connection> Connections { get; set; } = new List<Connection>();
     }
 }

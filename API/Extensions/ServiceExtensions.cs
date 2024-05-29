@@ -3,24 +3,28 @@ using API.Core.Contracts;
 using API.Core.Implements;
 using API.Data;
 using API.Entities;
+using API.Errors;
 using API.Profiles;
+using API.SignalR;
 using Asp.Versioning;
 using Asp.Versioning.ApiExplorer;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.SwaggerGen;
+using System.Reflection;
 using System.Text;
 
 namespace API.Extensions
 {
     public static class ServiceExtensions
     {
-        public static void ConfigCORS(this IServiceCollection services, IConfiguration configuration)
+        public static void ConfigureCORS(this IServiceCollection services, IConfiguration configuration)
         {
             var corsOrigins = configuration.GetSection("OriginAllowed").Get<string[]>() ?? new string[] { };
             services.AddCors(options =>
@@ -36,7 +40,7 @@ namespace API.Extensions
             });
         }
 
-        public static void ConfigDatabase(this IServiceCollection services, IConfiguration configuration)
+        public static void ConfigureDatabase(this IServiceCollection services, IConfiguration configuration)
         {
             services.AddDbContext<ConnectifyDbContext>(options =>
             {
@@ -44,13 +48,15 @@ namespace API.Extensions
             });
         }
 
-        public static void ConfigRegister(this IServiceCollection services)
+        public static void ConfigureRegister(this IServiceCollection services)
         {
             services.AddScoped<ITokenService, TokenService>();
 
             services.AddScoped<IUnitOfWork, UnitOfWork>();
 
             services.AddScoped<LogUserActivityAttribute>();
+
+            services.AddSingleton<PresenceTracker>();
 
             services.AddAutoMapper(typeof(AutoMapperProfiles).Assembly);
         }
@@ -80,6 +86,8 @@ namespace API.Extensions
                         description.GroupName,
                         CreateVersionInfo(description));
                 }
+
+                options.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, $"{Assembly.GetExecutingAssembly().GetName().Name}.xml"));
 
                 options.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
                 {
@@ -224,6 +232,15 @@ namespace API.Extensions
             });
 
             return services;
+        }
+
+        public static void ConfigureSignalR(this IServiceCollection services)
+        {
+            services.AddSignalR(options =>
+            {
+                options.EnableDetailedErrors = true;
+                options.AddFilter<SignalRHubFilter>();
+            });
         }
     }
 }

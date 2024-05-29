@@ -9,6 +9,8 @@ namespace API.Core.Contracts
         IGenericRepository<Group> Groups { get; }
         IGenericRepository<GroupMember> GroupMembers { get; }
         IGenericRepository<Message> Messages { get; }
+        IGenericRepository<Connection> Connections { get; }
+        IGenericRepository<Meeting> Meetings { get; }
 
         Task SaveAsync();
         bool HasChanges();
