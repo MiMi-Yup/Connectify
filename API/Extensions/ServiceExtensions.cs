@@ -44,7 +44,7 @@ namespace API.Extensions
         {
             services.AddDbContext<ConnectifyDbContext>(options =>
             {
-                options.UseSqlServer(configuration.GetConnectionString("DefaultConnection"));
+                options.UseNpgsql(configuration.GetConnectionString("DefaultConnection"));
             });
         }
 
